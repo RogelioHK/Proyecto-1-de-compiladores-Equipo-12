@@ -1,143 +1,199 @@
 #include "Parser.h"
 #include <iostream>
 
-namespace C_1{
+namespace C_1
+{
+    Parser::Parser()
+    {
+    }
 
-	Parser::Parser(/*args*/){
-	}
+    Parser::Parser(Lexer *lexer)
+    {
+        this->lexer= lexer;
+    }
+    
+    Parser::~Parser()
+    {
+    }
 
-	Parser::Parser(Lexer *lexer){
-		this->lexer = lexer;
-	}
+    void Parser::programa(){
+        declaraciones();
+        sentencias();
+    }
 
-	Parser::~Parser(){
-		void Parser::programa(){
-			declaraciones();
-			sentencias();
-		}
+    void Parser::declaraciones(){
+        declaracion();
+        declaraciones_();
+    }
 
-		void Parser::declaraciones(){
-			declaracion();
-			declaracionesP();
-		}
+    void Parser::declaraciones_(){
+        while(token ==INT || token == FLOAT)
+            declaracion();
+    }
 
-		void Parser::declaracionesP(){
-			if(token == INT || token == FLOAT){
-				declaraciones();
-				declaracionesP();
-			}
-		}
+    void Parser::declaracion(){
+        tipo();
+        lista_var();
+        eat(PYC);
+    }
 
-		void Parser::declaracion(){
-			tipo();
-			lista_var();
-		}
+    void Parser::tipo(){
+        switch (token)
+        {
+            case INT:
+                eat(INT);                
+                break;
+            case FLOAT:
+                eat(FLOAT);
+                break;
+            default:
+                error("El token debe ser INT o FLOAT");
+                break;
+        }
+    }
+    void Parser::lista_var(){
+        eat(ID);
+        lista_var_();
+    }
 
-		void Parser::tipo(){
-			switch(token){
-				case INT:
-					eat(INT);
-					break;
+    void Parser::lista_var_(){
+        while(token==COMA){
+            eat(COMA);
+            eat(ID);
+        }
+    }
 
-				case FLOAT;
-					eat(FLOAT);
-					break;
+    void Parser::sentencias(){
+        sentencia();
+        sentencias_();
+    }
 
-				default:
-					error("El token debe ser int o float");
-					break;
-			}
-		}
+    void Parser::sentencias_(){
+        while(token == ID || token == IF || token == WHILE)
+            sentencia();
+    }
 
-		void Parser::lista_var(){
-			eat(ID);
-			lista_varP();
-		}
+    void Parser::sentencia(){
+        switch (token)
+        {
+            case ID:
+                eat(ID);
+                eat(ASIG);
+                expresion();
+                eat(PYC);
+                break;
 
-		void Parser::lista_varP(){
-			if(--){
-				eat(COMA)
-				lista_varP();
-			}
-		}
+            case IF:
+                eat(IF);
+                eat(LPAR);
+                expresion();
+                eat(RPAR);
+                sentencias();
+                eat(ELSE);
+                sentencias();
+                break;
 
-		void Parser::sentencias(){
-			sentencia();
-			sentenciasP();
-		}
+            case WHILE:
+                eat(WHILE);
+                eat(LPAR);
+                expresion();
+                eat(RPAR);
+                sentencias();
+                break;
+        
+            default:
+                error("Se esperaba un ID o un IF o un WHILE");
+                break;
+        }
+    }
 
-		void Parser::sentenciasP(){
-			if((token == ID && token == ASIG) || token == IF && token == ELSE){
-				sentencia();
-				sentenciasP();
-			}
-		}
+    void Parser::expresion(){
+        termino();
+        expresion_();
+    }
 
-		void Parser::sentencia(){
-			if(token == LPAR || token == RPAR || token == ID || token == NUMERO ){
-				expresion();
-			}else{
-				expresion();
-				sentencias();
-			}
-		}
+    void Parser::expresion_(){
+        while(token == MAS || token == MENOS){
+	        switch(token)
+	        {
+	            case MAS:
+	                //eat(MAS);
+	                //termino();
+	            	token = lexer ->yylex();
+	                break;
+	            case MENOS:
+	                //eat(MENOS);
+	                //termino();
+	                token = lexer ->yylex();
+	                break;
+	            default:
+	                return;
+	        }
+	    }
+    }
 
-		void Parser::expresion(){
-			termino();
-			expresion();
-		}
+    void Parser::termino(){
+        factor();
+        termino_();
+    }
 
-		void Parser::expresionP(){
-			if(token == SUMA){
-				termino();
-				expresion();
-			}else{
-				if(token == RESTA){
-					termino();
-					expresionP();
-				}
-			}
-		}
+    void Parser::termino_(){
+        while(token == MUL || token == DIV){
+	        switch(token)
+	        {
+	            case MUL:
+	                //eat(MUL);
+	                //factor();
+		            token = lexer ->yylex();
+	                break;
+	            case DIV:
+	                //eat(DIV);
+	                //factor();
+	            	token = lexer ->yylex();
+	                break;
+	            default:
+	                return;
+	        }
+    	}
+    }
 
-		void Parser::termino(){
-			factor();
-			terminoP();
-		}
+    void Parser::factor(){
+        switch(token){
+            case ID:
+                eat(ID);
+                break;
+            case NUMERO:
+                eat(NUMERO);
+                break;
+            case LPAR:
+                eat(LPAR);
+                expresion();
+                eat(RPAR);
+            default:
+                error("Se esperaba ID o NUMERO o LPAR");
+        }
+    }
 
-		void Parser::terminoP(){
-			if(toker == MUL){
-				factor();
-				terminoP();
-			}else{
-				if(token == DIV){
-					factor();
-					terminoP();
-				}
-			}
-		}
+    void Parser::eat(int t){
+        if(token == t){
+            token = lexer->yylex();
+        }else
+            error("Se esperaba el token "+ lexer->TOKEN[token]);
+    }
 
-		void Parser::factor(){
-			if(token == LPAR ||token == RPAR ){
-				expresion();
-			}else{
-				if(token == ID){
-					eat(ID);
-				}else{
-					if(token == NUMERO){
-						eat(NUMERO);
-					}else{
-						error("Error");
-					}
-				}
-			}
-		}
+    void Parser::error(string msg){
+        cout<<"ERROR DE SINTAXIS "<<msg<< " en la línea "<< lexer->getLine()<<endl;
+        exit(-1);
+    }   
 
-		void Parser::eat(int t){
+    void Parser::parse(){
+        token = lexer->yylex();
+        programa();
+        if(token == 0){
+            cout<<"La cadena es aceptada"<<endl;
+        }else{
+            cout<<"La cadena no pertenece al lenguaje generado por la gramática"<<endl;
+        }
+    }
 
-		}
-
-		void Parser::error(string msg){
-
-		}
-	}
 }
